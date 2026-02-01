@@ -30,6 +30,7 @@ function initExam() {
     loadQuestions();
     startTimer();
     initPDF();
+    initKeyboardNavigation();
 
     if (dom.finishBtn) {
         dom.finishBtn.addEventListener('click', () => submitExam(false));
@@ -244,6 +245,7 @@ async function loadQuestions() {
                     </div>
                 `;
                 Toast.warning(`Nenhuma questão encontrada (ID: ${json.debug?.user_id})`);
+                updateProgress();
             }
         } else {
             dom.listContainer.innerHTML = `<div style="text-align:center; padding:20px; color:var(--danger-color);">Erro ao carregar: ${json.message}</div>`;
@@ -269,10 +271,11 @@ function renderQuestionList() {
         }
 
         const badge = isLocked ? ((q.locked_is_correct == 1) ? '✅' : '❌') : '';
+        const pdfPageRef = Number.isFinite(Number(q.pdf_page_ref)) ? Number(q.pdf_page_ref) : null;
         item.innerHTML = `
             <div class="q-item-header">
                 <span>Questão ${i + 1} ${badge}</span>
-                <span class="pdf-link" onclick="syncPdf(${q.pdf_page_ref})">Ver Pág ${q.pdf_page_ref} ↗</span>
+                ${pdfPageRef ? `<span class="pdf-link" onclick="syncPdf(${pdfPageRef})">Ver Pág ${pdfPageRef} ↗</span>` : `<span class="pdf-link" style="opacity:0.6; cursor: default;">PDF indisponível</span>`}
             </div>
             <div class="q-statement">${(q.statement || "").replace(/\n/g, '<br>')}</div>
             <div class="q-options-row"></div>
@@ -322,17 +325,6 @@ function renderQuestionList() {
 
     // Initialize Navigator
     renderNavigator();
-
-    // Keyboard Shortcuts
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-            e.preventDefault();
-            navigateToNext();
-        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-            e.preventDefault();
-            navigateToPrev();
-        }
-    });
 }
 
 let currentFocusIndex = -1;
@@ -359,8 +351,17 @@ function scrollToQuestionIndex(i) {
     }
 }
 
-// Initialize Navigator
-renderNavigator();
+function initKeyboardNavigation() {
+    document.addEventListener('keydown', (e) => {
+        if (['ArrowRight', 'ArrowDown'].includes(e.key)) {
+            e.preventDefault();
+            navigateToNext();
+        } else if (['ArrowLeft', 'ArrowUp'].includes(e.key)) {
+            e.preventDefault();
+            navigateToPrev();
+        }
+    });
+}
 
 
 function renderNavigator() {
@@ -425,18 +426,31 @@ function handleAnswer(qId, val) {
 function updateProgress() {
     const c = Object.keys(userAnswers).length, t = questionsData.length;
     if (dom.progressFill) dom.progressFill.style.width = `${(t === 0 ? 0 : c / t) * 100}%`;
-    if (dom.progressText) dom.progressText.textContent = `${c} respondidas`;
+    if (dom.progressText) dom.progressText.textContent = `${c} de ${t} respondidas`;
 }
 async function submitExam(f = false) {
     if (!f && !confirm('Finalizar?')) return;
     const params = new URLSearchParams(window.location.search);
     const mode = params.get('mode') || 'private';
-    const res = await fetch('api/submit_answer.php', {
-        method: 'POST',
-        body: JSON.stringify({ answers: userAnswers, mode: mode })
-    });
-    const dat = await res.json();
-    if (dat.success) renderResultPanel(dat);
+    try {
+        const res = await fetch('api/submit_answer.php', {
+            method: 'POST',
+            body: JSON.stringify({ answers: userAnswers, mode: mode })
+        });
+        if (!res.ok) {
+            Toast.error("Falha ao enviar respostas.");
+            return;
+        }
+        const dat = await res.json();
+        if (dat.success) {
+            renderResultPanel(dat);
+        } else {
+            Toast.error(dat.message || "Erro ao finalizar prova.");
+        }
+    } catch (error) {
+        Toast.error("Erro de conexão ao enviar respostas.");
+        console.error(error);
+    }
 }
 function renderResultPanel(d) {
     // 0. Force Re-render to ensure elements exist (fixes blank screen issue)
@@ -469,7 +483,7 @@ function renderResultPanel(d) {
     const summaryHtml = `
         <div class="result-container" style="text-align:center; padding:30px; background:#fff; margin-bottom: 24px; border-radius: var(--radius-md); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
             <h2 style="font-size: 32px; color: var(--primary-color);">Resultado: +${d.score} XP</h2>
-            <p style="color: var(--text-muted); margin-bottom: 20px;">Você acertou ${d.score} de ${d.details.length} questões respondidas.</p>
+            <p style="color: var(--text-muted); margin-bottom: 20px;">Você acertou ${d.score} de ${d.details?.length || 0} questões respondidas.</p>
             ${mistakesHtml}
             <div style="margin-top: 24px;">
                 <a href="dashboard.html" class="btn btn-primary">Voltar ao Dashboard</a>
