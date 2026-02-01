@@ -38,7 +38,10 @@ async function loadRanking() {
                 else rankHtml = `<span style="font-family: var(--font-stack); font-weight: 500; color: var(--text-muted);">${rank}º</span>`;
 
                 // Avatar (First letter)
-                const initial = item.username.charAt(0).toUpperCase();
+                const safeName = (item.username || 'Usuário').toString();
+                const initial = safeName.charAt(0).toUpperCase();
+                const lastAttemptDate = item.last_attempt ? new Date(item.last_attempt) : null;
+                const hasValidDate = lastAttemptDate && !Number.isNaN(lastAttemptDate.getTime());
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
@@ -46,13 +49,18 @@ async function loadRanking() {
                     <td>
                         <div class="user-cell">
                             <div class="user-avatar">${initial}</div>
-                            <span>${item.username}</span>
+                            <span>${safeName}</span>
                         </div>
                     </td>
                     <td>
                         <span style="font-weight:700; color:#0f172a;">${item.total_score}</span> XP
                     </td>
-                    <td>${new Date(item.last_attempt).toLocaleDateString('pt-BR')} <span style="font-size:12px; color:#94a3b8;">${new Date(item.last_attempt).toLocaleTimeString('pt-BR')}</span></td>
+                    <td>
+                        ${hasValidDate ? lastAttemptDate.toLocaleDateString('pt-BR') : 'Sem registro'}
+                        <span style="font-size:12px; color:#94a3b8;">
+                            ${hasValidDate ? lastAttemptDate.toLocaleTimeString('pt-BR') : ''}
+                        </span>
+                    </td>
                 `;
                 tbody.appendChild(tr);
             });
