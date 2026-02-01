@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tec Simulado | Prova Digital</title>
+    <!-- Google Fonts for Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/style.css?v=1.1">
+    <link rel="stylesheet" href="assets/css/navigator.css">
+    <link rel="stylesheet" href="assets/css/toast.css">
+</head>
+
+<body>
+
+    <!-- Premium Header -->
+    <header class="app-header">
+        <div class="brand-section">
+            <span class="brand-logo">📝</span>
+            <span class="brand-title">Tec Simulado</span>
+        </div>
+
+        <div class="exam-meta">
+            <div class="timer-badge" id="exam-timer">
+                04:00:00
+            </div>
+
+            <div class="controls-section">
+                <button id="pause-btn" class="btn btn-ghost"
+                    style="color: var(--warning-color); border: 1px solid var(--warning-color);">⏸ Pausar</button>
+                <a href="dashboard.html" class="btn btn-ghost">Sair</a>
+                <button id="finish-btn" class="btn btn-primary">Finalizar Prova</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="main-wrapper">
+        <!-- Questions Panel (Centered, Full Width) -->
+        <div class="question-nav-card">
+            <div class="nav-header">
+                <span class="nav-title">Simulado</span>
+                <div class="progress-wrapper">
+                    <div class="progress-bar">
+                        <div id="progress-fill" class="progress-fill"></div>
+                    </div>
+                    <span id="progress-text" class="progress-text">0 de 0 respondidas</span>
+                </div>
+            </div>
+
+            <div id="question-list" class="nav-content q-list">
+                <!-- Javascript will inject question items here -->
+                <div style="text-align: center; padding: 20px; color: #64748b;">
+                    Carregando questões...
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Pause Overlay -->
+    <div id="pause-overlay" class="pdf-modal-overlay"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(30, 41, 59, 0.95); z-index: 2000; justify-content: center; align-items: center; flex-direction: column; gap: 20px;">
+        <div style="font-size: 64px;">⏸</div>
+        <h1 style="color: white; font-size: 32px; font-weight: 700;">Prova Pausada</h1>
+        <p style="color: #cbd5e1; font-size: 18px;">O tempo também foi pausado. Clique abaixo para continuar.</p>
+        <button id="resume-btn" class="btn btn-primary" style="font-size: 18px; padding: 12px 32px;">Retomar
+            Prova</button>
+    </div>
+
+    <!-- PDF Viewer Modal (Hidden by default, styled in CSS) -->
+    <div id="pdf-modal-overlay" class="pdf-modal-overlay"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center;">
+        <div class="pdf-modal-content"
+            style="background: white; padding: 20px; border-radius: 8px; max-width: 90%; max-height: 90%; display: flex; flex-direction: column;">
+            <div class="pdf-toolbar" style="margin-bottom: 10px; display: flex; gap: 10px; justify-content: center;">
+                <button onclick="document.getElementById('pdf-modal-overlay').style.display='none'"
+                    class="btn btn-ghost">Fechar ✖</button>
+                <button onclick="prevPage()" class="btn btn-secondary">◀</button>
+                <span class="pdf-img-header">Página <span id="page-num">1</span> de <span
+                        id="page-count">--</span></span>
+                <button onclick="nextPage()" class="btn btn-secondary">▶</button>
+                <button onclick="zoomIn()" class="btn btn-ghost">➕</button>
+                <button onclick="zoomOut()" class="btn btn-ghost">➖</button>
+            </div>
+            <div style="overflow: auto; flex: 1; text-align: center;">
+                <canvas id="pdf-render" style="border: 1px solid #ccc;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+        // Helper to open modal
+        window.openPdfModal = () => {
+            document.getElementById('pdf-modal-overlay').style.display = 'flex';
+        };
+
+        // Wrap syncPdf to also open modal
+        const originalSync = window.syncPdf;
+        window.syncPdf = (page) => {
+            if (originalSync) originalSync(page);
+            openPdfModal();
+        };
+    </script>
+    <script src="assets/js/toast.js"></script>
+    <script src="assets/js/exam.js?v=4.6"></script>
+</body>
+
+</html>

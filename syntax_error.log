@@ -1,0 +1,10 @@
+C:\Users\talle\OneDrive\Área de Trabalho\App Tec Simulado\assets\js\exam.js:329
+}
+^
+
+SyntaxError: Unexpected token '}'
+    at internalCompileFunction (node:internal/vm:73:18)
+    at wrapSafe (node:internal/modules/cjs/loader:1178:20)
+    at checkSyntax (node:internal/main/check_syntax:67:3)
+
+Node.js v18.16.1

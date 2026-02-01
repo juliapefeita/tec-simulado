@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>API Debugger</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+
+        #output {
+            background: #fff;
+            padding: 20px;
+            border: 1px solid #ccc;
+            white-space: pre-wrap;
+        }
+
+        .error {
+            color: red;
+        }
+
+        .success {
+            color: green;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>Diagnóstico de Conexão</h2>
+    <p>Status da API de Questões:</p>
+    <div id="status">Testando...</div>
+    <pre id="output"></pre>
+
+    <script>
+        async function runTest() {
+            const out = document.getElementById('output');
+            const stat = document.getElementById('status');
+
+            try {
+                // Determine mode from URL or default to private
+                const response = await fetch('api/get_questions.php?mode=private&t=' + Date.now());
+                const text = await response.text();
+
+                out.textContent = text; // Show raw text first
+
+                try {
+                    const json = JSON.parse(text);
+                    if (json.success) {
+                        stat.innerHTML = `<b class="success">✅ JSON Válido. ${json.data.length} questões encontradas.</b>`;
+                        stat.innerHTML += `<br>Debug: Mode=${json.debug?.mode}, UID=${json.debug?.user_id}`;
+                    } else {
+                        stat.innerHTML = `<b class="error">❌ Erro na API: ${json.message}</b>`;
+                    }
+                } catch (e) {
+                    stat.innerHTML = `<b class="error">❌ Resposta não é JSON válido! (Provável erro PHP)</b>`;
+                }
+            } catch (e) {
+                stat.innerHTML = `<b class="error">❌ Erro de Rede: ${e.message}</b>`;
+            }
+        }
+        runTest();
+    </script>
+</body>
+
+</html>

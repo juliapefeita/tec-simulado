@@ -1,0 +1,9 @@
+{
+  "name": "exam-parser",
+  "version": "1.0.0",
+  "description": "",
+  "main": "extract_pdf.js",
+  "dependencies": {
+    "pdf-parse": "^1.1.1"
+  }
+}

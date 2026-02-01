@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Tec Simulado</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/toast.css">
+</head>
+
+<body>
+    <!-- Premium Header (Reused) -->
+    <header class="app-header">
+        <div class="brand-section">
+            <span class="brand-logo">📝</span>
+            <span class="brand-title">Tec Simulado</span>
+        </div>
+
+        <div class="controls-section">
+            <button onclick="logout()" class="btn btn-ghost" style="color: var(--danger-color);">Sair</button>
+        </div>
+    </header>
+
+    <div class="main-wrapper" style="overflow-y: auto;">
+        <div class="dashboard-container">
+            <div class="dashboard-header">
+                <h2 class="section-title">Painel de Performance</h2>
+                <div class="actions" style="display: flex; gap: 20px; align-items: flex-start;">
+
+                    <!-- Group: Private -->
+                    <div
+                        style="display:flex; flex-direction:column; gap:8px; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; background: #f8fafc;">
+                        <span
+                            style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Meu
+                            Simulado</span>
+                        <a href="exam.html?mode=private" class="btn btn-primary"
+                            style="width: 100%; text-align:center;">
+                            📝 Iniciar
+                        </a>
+                        <div style="display:flex; gap:4px;">
+                            <button onclick="triggerUpload('private')" class="btn btn-ghost"
+                                style="font-size:12px; flex:1; border: 1px solid var(--border-color);"
+                                title="Importar PDF">
+                                📂 Importar
+                            </button>
+                            <button onclick="resetExam('private')" class="btn btn-ghost"
+                                style="font-size:12px; color: var(--error-color); border: 1px solid var(--error-color);"
+                                title="Limpar">
+                                🗑️
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Group: Challenge -->
+                    <div
+                        style="display:flex; flex-direction:column; gap:8px; padding: 10px; border: 1px solid #e0e7ff; border-radius: 8px; background: #eef2ff;">
+                        <span
+                            style="font-size:12px; font-weight:700; color:#6366f1; text-transform:uppercase; letter-spacing:0.5px;">Desafio
+                            Geral</span>
+                        <a href="exam.html?mode=challenge" class="btn btn-success"
+                            style="width: 100%; text-align:center; background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); border:none; box-shadow: 0 4px 10px rgba(99, 102, 241, 0.4);">
+                            ⚔️ Iniciar
+                        </a>
+                        <div style="display:flex; gap:4px;">
+                            <button onclick="triggerUpload('challenge')" class="btn btn-ghost"
+                                style="font-size:12px; flex:1; border: 1px solid #c7d2fe; color: #4f46e5;"
+                                title="Importar PDF">
+                                🏆 Importar
+                            </button>
+                            <button onclick="resetExam('challenge')" class="btn btn-ghost"
+                                style="font-size:12px; color: var(--danger-color); border: 1px solid var(--danger-color);"
+                                title="Limpar">
+                                🗑️
+                            </button>
+                        </div>
+                    </div>
+
+                    <input type="file" id="pdf-upload" accept=".pdf" style="display: none;" onchange="uploadPdf(this)">
+                </div>
+            </div>
+
+            <!-- New Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">🏆</div>
+                    <div class="stat-info">
+                        <span class="stat-label">Líder do Ranking</span>
+                        <span class="stat-value" id="stat-leader">--</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">📊</div>
+                    <div class="stat-info">
+                        <span class="stat-label">Média Geral</span>
+                        <span class="stat-value" id="stat-avg">--</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-info">
+                        <span class="stat-label">Participantes</span>
+                        <span class="stat-value" id="stat-total">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <h3 class="section-subtitle">Ranking Geral</h3>
+
+            <table id="ranking-table" class="ranking-table">
+                <thead>
+                    <tr>
+                        <th width="80">Posição</th>
+                        <th>Usuário</th>
+                        <th>Pontuação Total (XP)</th>
+                        <th>Última Atividade</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Populated by JS -->
+                </tbody>
+            </table>
+
+        </div>
+    </div>
+
+    <script src="assets/js/toast.js"></script>
+    <script src="assets/js/app.js?v=2.1"></script>
+    <script>
+        function logout() {
+            window.location.href = 'index.html';
+        }
+
+        let uploadMode = 'private';
+        function triggerUpload(mode) {
+            uploadMode = mode;
+            document.getElementById('pdf-upload').click();
+        }
+
+        async function uploadPdf(input) {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                const formData = new FormData();
+                formData.append('pdf', file);
+                formData.append('mode', uploadMode);
+
+                const btn = document.querySelector(`button[onclick="triggerUpload('${uploadMode}')"]`);
+                const originalText = btn ? btn.innerText : 'Importar';
+                if (btn) {
+                    btn.innerText = '⏳';
+                    btn.disabled = true;
+                }
+
+                Toast.info("Enviando PDF...", "Aguarde");
+
+                try {
+                    const response = await fetch('api/upload_pdf.php', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const text = await response.text();
+                    try {
+                        const result = JSON.parse(text);
+                        if (result.success) {
+                            Toast.success(result.message);
+                            setTimeout(() => location.reload(), 1500);
+                        } else {
+                            Toast.error(result.message);
+                        }
+                    } catch (e) {
+                        Toast.error("Resposta inválida do servidor.");
+                        console.error(e);
+                    }
+
+                } catch (error) {
+                    Toast.error("Erro de conexão.");
+                } finally {
+                    if (btn) {
+                        btn.innerText = originalText;
+                        btn.disabled = false;
+                    }
+                    input.value = '';
+                }
+            }
+        }
+        async function resetExam(mode) {
+            if (!confirm('Você realmente deseja limpar este simulado?')) return;
+
+            try {
+                const response = await fetch('api/reset_db.php?mode=' + mode);
+                const text = await response.text();
+                try {
+                    const result = JSON.parse(text);
+                    if (result.success) {
+                        Toast.success(result.message);
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        Toast.error(result.message);
+                    }
+                } catch (e) {
+                    Toast.success("Limpo com sucesso!");
+                    setTimeout(() => location.reload(), 1500);
+                }
+            } catch (e) {
+                Toast.error("Erro de conexão.");
+            }
+        }
+    </script>
+</body>
+
+</html>
