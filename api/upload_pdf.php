@@ -14,6 +14,13 @@ function send_json($payload) {
     exit;
 }
 
+function safe_message($text) {
+    if (function_exists('mb_convert_encoding')) {
+        return mb_convert_encoding($text, 'UTF-8', 'UTF-8');
+    }
+    return $text;
+}
+
 register_shutdown_function(function () {
     $error = error_get_last();
     if (!$error) {
@@ -118,12 +125,12 @@ if (move_uploaded_file($file['tmp_name'], $targetPath)) {
             $conn->close();
             send_json(['success' => true, 'message' => "Importação Concluída! Mode: $mode"]);
         } else {
-            $safeOutput = mb_convert_encoding($conn->error, 'UTF-8', 'UTF-8');
+            $safeOutput = safe_message($conn->error);
             $conn->close();
             send_json(['success' => false, 'message' => "Erro SQL: " . $safeOutput]);
         }
     } else {
-        $safeOutput = mb_convert_encoding($output, 'UTF-8', 'UTF-8');
+        $safeOutput = safe_message($output);
         $conn->close();
         send_json(['success' => false, 'message' => "Erro: SQL não gerado. Log: " . $safeOutput]);
     }
