@@ -72,6 +72,10 @@ if (move_uploaded_file($file['tmp_name'], $targetPath)) {
     $user = 'root';
     $pass = '123456';
 
+    if (!class_exists('mysqli')) {
+        send_json(['success' => false, 'message' => 'Extensão mysqli não habilitada no servidor.']);
+    }
+
     $conn = new mysqli($host, $user, $pass, $db);
     if ($conn->connect_error) {
         send_json(['success' => false, 'message' => 'DB Connection failed: ' . $conn->connect_error]);
@@ -92,6 +96,9 @@ if (move_uploaded_file($file['tmp_name'], $targetPath)) {
     $scriptPath = __DIR__ . '/../parse_questions.py';
     $cmd = "python " . escapeshellarg($scriptPath) . " 2>&1";
     $output = shell_exec($cmd);
+    if ($output === null) {
+        send_json(['success' => false, 'message' => 'Execução de comandos está desabilitada no servidor.']);
+    }
 
     // 3. EXECUTE SQL
     $sqlFile = __DIR__ . '/../import_questions.sql';
