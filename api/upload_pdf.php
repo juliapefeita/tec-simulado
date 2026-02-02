@@ -6,25 +6,27 @@ error_reporting(0);
 header('Content-Type: application/json');
 session_start();
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    ob_clean();
-    echo json_encode(['success' => false, 'message' => 'Method not allowed']);
+function send_json($payload) {
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
+    echo json_encode($payload);
     exit;
 }
 
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    send_json(['success' => false, 'message' => 'Method not allowed']);
+}
+
 if (!isset($_FILES['pdf']) || $_FILES['pdf']['error'] !== UPLOAD_ERR_OK) {
-    ob_clean();
-    echo json_encode(['success' => false, 'message' => 'Upload failed']);
-    exit;
+    send_json(['success' => false, 'message' => 'Upload failed']);
 }
 
 $file = $_FILES['pdf'];
 $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
 
 if ($ext !== 'pdf') {
-    ob_clean();
-    echo json_encode(['success' => false, 'message' => 'Only PDF files allowed']);
-    exit;
+    send_json(['success' => false, 'message' => 'Only PDF files allowed']);
 }
 
 // Ensure directory exists
@@ -44,17 +46,13 @@ if (move_uploaded_file($file['tmp_name'], $targetPath)) {
 
     $conn = new mysqli($host, $user, $pass, $db);
     if ($conn->connect_error) {
-        ob_clean();
-        echo json_encode(['success' => false, 'message' => 'DB Connection failed: ' . $conn->connect_error]);
-        exit;
+        send_json(['success' => false, 'message' => 'DB Connection failed: ' . $conn->connect_error]);
     }
 
     // Security: Get User ID
     $uid = $_SESSION['user_id'] ?? 0;
     if ($uid === 0) {
-        ob_clean();
-        echo json_encode(['success' => false, 'message' => 'Unauthorized']);
-        exit;
+        send_json(['success' => false, 'message' => 'Unauthorized']);
     }
 
     // 1. Get Max ID (to track new questions)
@@ -97,23 +95,19 @@ if (move_uploaded_file($file['tmp_name'], $targetPath)) {
             }
 
             $conn->close();
-            ob_clean();
-            echo json_encode(['success' => true, 'message' => "Importação Concluída! Mode: $mode"]);
+            send_json(['success' => true, 'message' => "Importação Concluída! Mode: $mode"]);
         } else {
             $safeOutput = mb_convert_encoding($conn->error, 'UTF-8', 'UTF-8');
-            ob_clean();
-            echo json_encode(['success' => false, 'message' => "Erro SQL: " . $safeOutput]);
             $conn->close();
+            send_json(['success' => false, 'message' => "Erro SQL: " . $safeOutput]);
         }
     } else {
         $safeOutput = mb_convert_encoding($output, 'UTF-8', 'UTF-8');
-        ob_clean();
-        echo json_encode(['success' => false, 'message' => "Erro: SQL não gerado. Log: " . $safeOutput]);
         $conn->close();
+        send_json(['success' => false, 'message' => "Erro: SQL não gerado. Log: " . $safeOutput]);
     }
 
 } else {
-    ob_clean();
-    echo json_encode(['success' => false, 'message' => 'Falha ao mover arquivo enviado']);
+    send_json(['success' => false, 'message' => 'Falha ao mover arquivo enviado']);
 }
 ?>
