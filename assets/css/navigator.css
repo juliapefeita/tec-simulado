@@ -15,6 +15,10 @@
     transition: transform 0.3s ease;
 }
 
+.question-nav-card {
+    margin-right: 0;
+}
+
 .nav-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
@@ -85,6 +89,26 @@
 
     .toggle-nav-btn {
         display: block;
+    }
+}
+
+@media (max-width: 1400px) and (min-width: 1201px) {
+    .q-navigator {
+        width: 220px;
+    }
+
+    .nav-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .question-nav-card {
+        margin-right: 240px;
+    }
+}
+
+@media (min-width: 1401px) {
+    .question-nav-card {
+        margin-right: 280px;
     }
 }
 
