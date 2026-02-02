@@ -14,6 +14,27 @@ function send_json($payload) {
     exit;
 }
 
+register_shutdown_function(function () {
+    $error = error_get_last();
+    if (!$error) {
+        return;
+    }
+    $fatalErrors = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR];
+    if (!in_array($error['type'], $fatalErrors, true)) {
+        return;
+    }
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Erro interno ao processar o PDF.',
+        'details' => $error['message']
+    ]);
+    exit;
+});
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     send_json(['success' => false, 'message' => 'Method not allowed']);
 }
