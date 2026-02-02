@@ -1,22 +1,60 @@
 <?php
-header('Content-Type: application/json');
+ob_start();
+ini_set('display_errors', 0);
+error_reporting(0);
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    echo json_encode(['success' => false, 'message' => 'Method not allowed']);
+header('Content-Type: application/json');
+session_start();
+
+function send_json($payload) {
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
+    echo json_encode($payload);
     exit;
 }
 
-if (!isset($_FILES['pdf']) || $_FILES['pdf']['error'] !== UPLOAD_ERR_OK) {
-    echo json_encode(['success' => false, 'message' => 'Upload failed']);
+function safe_message($text) {
+    if (function_exists('mb_convert_encoding')) {
+        return mb_convert_encoding($text, 'UTF-8', 'UTF-8');
+    }
+    return $text;
+}
+
+register_shutdown_function(function () {
+    $error = error_get_last();
+    if (!$error) {
+        return;
+    }
+    $fatalErrors = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR];
+    if (!in_array($error['type'], $fatalErrors, true)) {
+        return;
+    }
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Erro interno ao processar o PDF.',
+        'details' => $error['message']
+    ]);
     exit;
+});
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    send_json(['success' => false, 'message' => 'Method not allowed']);
+}
+
+if (!isset($_FILES['pdf']) || $_FILES['pdf']['error'] !== UPLOAD_ERR_OK) {
+    send_json(['success' => false, 'message' => 'Upload failed']);
 }
 
 $file = $_FILES['pdf'];
 $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
 
 if ($ext !== 'pdf') {
-    echo json_encode(['success' => false, 'message' => 'Only PDF files allowed']);
-    exit;
+    send_json(['success' => false, 'message' => 'Only PDF files allowed']);
 }
 
 // Ensure directory exists
@@ -34,18 +72,19 @@ if (move_uploaded_file($file['tmp_name'], $targetPath)) {
     $user = 'root';
     $pass = '123456';
 
+    if (!class_exists('mysqli')) {
+        send_json(['success' => false, 'message' => 'Extensão mysqli não habilitada no servidor.']);
+    }
+
     $conn = new mysqli($host, $user, $pass, $db);
     if ($conn->connect_error) {
-        echo json_encode(['success' => false, 'message' => 'DB Connection failed: ' . $conn->connect_error]);
-        exit;
+        send_json(['success' => false, 'message' => 'DB Connection failed: ' . $conn->connect_error]);
     }
 
     // Security: Get User ID
-    session_start();
     $uid = $_SESSION['user_id'] ?? 0;
     if ($uid === 0) {
-        echo json_encode(['success' => false, 'message' => 'Unauthorized']);
-        exit;
+        send_json(['success' => false, 'message' => 'Unauthorized']);
     }
 
     // 1. Get Max ID (to track new questions)
@@ -57,6 +96,9 @@ if (move_uploaded_file($file['tmp_name'], $targetPath)) {
     $scriptPath = __DIR__ . '/../parse_questions.py';
     $cmd = "python " . escapeshellarg($scriptPath) . " 2>&1";
     $output = shell_exec($cmd);
+    if ($output === null) {
+        send_json(['success' => false, 'message' => 'Execução de comandos está desabilitada no servidor.']);
+    }
 
     // 3. EXECUTE SQL
     $sqlFile = __DIR__ . '/../import_questions.sql';
@@ -88,19 +130,19 @@ if (move_uploaded_file($file['tmp_name'], $targetPath)) {
             }
 
             $conn->close();
-            echo json_encode(['success' => true, 'message' => "Importação Concluída! Mode: $mode"]);
+            send_json(['success' => true, 'message' => "Importação Concluída! Mode: $mode"]);
         } else {
-            $safeOutput = mb_convert_encoding($conn->error, 'UTF-8', 'UTF-8');
-            echo json_encode(['success' => false, 'message' => "Erro SQL: " . $safeOutput]);
+            $safeOutput = safe_message($conn->error);
             $conn->close();
+            send_json(['success' => false, 'message' => "Erro SQL: " . $safeOutput]);
         }
     } else {
-        $safeOutput = mb_convert_encoding($output, 'UTF-8', 'UTF-8');
-        echo json_encode(['success' => false, 'message' => "Erro: SQL não gerado. Log: " . $safeOutput]);
+        $safeOutput = safe_message($output);
         $conn->close();
+        send_json(['success' => false, 'message' => "Erro: SQL não gerado. Log: " . $safeOutput]);
     }
 
 } else {
-    echo json_encode(['success' => false, 'message' => 'Falha ao mover arquivo enviado']);
+    send_json(['success' => false, 'message' => 'Falha ao mover arquivo enviado']);
 }
 ?>

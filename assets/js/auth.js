@@ -30,8 +30,14 @@ toggleBtn.addEventListener('click', () => {
 
 authForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const username = document.getElementById('username').value;
+    const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value;
+
+    if (!username || !password.trim()) {
+        message.style.color = 'red';
+        message.textContent = 'Preencha usuário e senha.';
+        return;
+    }
 
     const endpoint = isLogin ? 'api/login.php' : 'api/register.php';
 
@@ -39,6 +45,7 @@ authForm.addEventListener('submit', async (e) => {
         const response = await fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
             body: JSON.stringify({ username, password })
         });
 

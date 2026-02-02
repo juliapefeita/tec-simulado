@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
 /* Global Styles & Variables */
 :root {
     /* Premium Palette */
@@ -41,7 +43,7 @@
 
 body {
     font-family: var(--font-stack);
-    background-color: var(--bg-app);
+    background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
     color: var(--text-main);
     line-height: 1.5;
     height: 100vh;
@@ -53,7 +55,7 @@ body {
 /* Header Bar */
 .app-header {
     height: var(--header-height);
-    background: var(--bg-panel);
+    background: rgba(255, 255, 255, 0.9);
     border-bottom: 1px solid var(--border-color);
     display: flex;
     align-items: center;
@@ -123,37 +125,57 @@ body {
     font-size: 14px;
     transition: all 0.2s ease;
     text-decoration: none;
+    gap: 8px;
 }
 
 .btn-ghost {
     background: transparent;
     color: var(--text-muted);
+    border: 1px solid transparent;
 }
 
 .btn-ghost:hover {
     background: #f1f5f9;
     color: var(--text-main);
+    border-color: #e2e8f0;
 }
 
 .btn-primary {
-    background: var(--accent-color);
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
     color: white;
-    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 6px 12px rgba(59, 130, 246, 0.25);
 }
 
 .btn-primary:hover {
-    background: #2563eb;
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
     transform: translateY(-1px);
 }
 
 .btn-success {
-    background: var(--success-color);
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
     color: white;
-    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+    box-shadow: 0 6px 12px rgba(16, 185, 129, 0.25);
 }
 
 .btn-success:hover {
-    background: #059669;
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    transform: translateY(-1px);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+.btn:focus-visible {
+    outline: 3px solid rgba(59, 130, 246, 0.35);
+    outline-offset: 2px;
+}
+
+.btn:disabled,
+.btn[disabled] {
+    cursor: not-allowed;
+    opacity: 0.6;
+    box-shadow: none;
 }
 
 /* Main Layout Grid (Restored Split) */
@@ -467,13 +489,13 @@ body {
     align-items: center;
     justify-content: center;
     padding: 24px;
-    background: var(--bg-app);
+    background: radial-gradient(circle at top, #eef2ff 0%, #f8fafc 50%, #f1f5f9 100%);
     min-height: 100vh;
     /* Ensure full height centering */
 }
 
 .auth-card {
-    background: #fff;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
     width: 100%;
     max-width: 420px;
     padding: 40px;
@@ -505,9 +527,23 @@ body {
     font-size: 14px;
 }
 
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-icon {
+    position: absolute;
+    left: 12px;
+    font-size: 16px;
+    color: #94a3b8;
+    pointer-events: none;
+}
+
 .form-group input {
     width: 100%;
-    padding: 12px 16px;
+    padding: 12px 16px 12px 40px;
     /* Comfy padding */
     border: 1px solid #cbd5e1;
     border-radius: var(--radius-sm);
@@ -600,7 +636,7 @@ body {
 }
 
 .stat-card {
-    background: #fff;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
     padding: 24px;
     border-radius: var(--radius-lg);
     border: 1px solid rgba(226, 232, 240, 0.8);
@@ -654,6 +690,18 @@ body {
     justify-content: center;
     font-size: 28px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.stat-card:nth-child(1) .stat-icon {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+}
+
+.stat-card:nth-child(2) .stat-icon {
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+}
+
+.stat-card:nth-child(3) .stat-icon {
+    background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
 }
 
 .stat-info {
@@ -728,6 +776,14 @@ body {
     background: #fff;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
     border-radius: 12px;
+}
+
+.ranking-table tbody tr:nth-child(odd):not(:nth-child(-n+3)) {
+    background: #f8fafc;
+}
+
+.ranking-table tbody tr:nth-child(even):not(:nth-child(-n+3)) {
+    background: #ffffff;
 }
 
 .ranking-table tbody tr:hover {

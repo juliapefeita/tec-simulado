@@ -6,9 +6,10 @@ async function loadRanking() {
         const data = await response.json();
 
         const tbody = document.querySelector('#ranking-table tbody');
+        if (!tbody) return;
         tbody.innerHTML = '';
 
-        if (data.success && data.data.length > 0) {
+        if (data.success && Array.isArray(data.data) && data.data.length > 0) {
             // --- Statistics Calculation ---
             const participants = data.data.length;
             const topScore = data.data[0].total_score; // Assumes sorted desc
@@ -41,6 +42,7 @@ async function loadRanking() {
                 const initial = item.username.charAt(0).toUpperCase();
 
                 const tr = document.createElement('tr');
+                const lastAttempt = formatDateTime(item.last_attempt);
                 tr.innerHTML = `
                     <td>${rankHtml}</td>
                     <td>
@@ -52,7 +54,7 @@ async function loadRanking() {
                     <td>
                         <span style="font-weight:700; color:#0f172a;">${item.total_score}</span> XP
                     </td>
-                    <td>${new Date(item.last_attempt).toLocaleDateString('pt-BR')} <span style="font-size:12px; color:#94a3b8;">${new Date(item.last_attempt).toLocaleTimeString('pt-BR')}</span></td>
+                    <td>${lastAttempt}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -68,4 +70,13 @@ async function loadRanking() {
     } catch (error) {
         console.error('Erro ao carregar ranking:', error);
     }
+}
+
+function formatDateTime(value) {
+    if (!value) return '<span style="color:#94a3b8;">Sem atividade</span>';
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+        return '<span style="color:#94a3b8;">Data inválida</span>';
+    }
+    return `${parsed.toLocaleDateString('pt-BR')} <span style="font-size:12px; color:#94a3b8;">${parsed.toLocaleTimeString('pt-BR')}</span>`;
 }

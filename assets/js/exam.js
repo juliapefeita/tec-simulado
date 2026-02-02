@@ -6,6 +6,7 @@ let questionsData = [];
 let userAnswers = {};
 let totalTime = 4 * 60 * 60;
 let timerInterval;
+let navigationListenerAttached = false;
 
 const dom = {
     finishBtn: document.getElementById('finish-btn'),
@@ -19,6 +20,66 @@ const dom = {
 // Highlight State
 let currentRange = null;
 let highlightMenu = null;
+
+function sanitizeQuestionHtml(rawHtml) {
+    if (!rawHtml) return '';
+    const template = document.createElement('template');
+    template.innerHTML = rawHtml;
+
+    const allowedTags = new Set([
+        'A', 'B', 'BR', 'DIV', 'EM', 'I', 'IMG', 'LI', 'MARK', 'OL', 'P', 'SPAN', 'STRONG', 'U', 'UL'
+    ]);
+    const allowedAttributes = {
+        A: ['href', 'target', 'rel', 'class', 'style'],
+        IMG: ['src', 'alt', 'title', 'class', 'style'],
+        '*': ['class', 'style']
+    };
+
+    const isSafeUrl = (value) => {
+        if (!value) return false;
+        return value.startsWith('http://')
+            || value.startsWith('https://')
+            || value.startsWith('/')
+            || value.startsWith('./')
+            || value.startsWith('../')
+            || value.startsWith('assets/');
+    };
+
+    const walker = document.createTreeWalker(template.content, NodeFilter.SHOW_ELEMENT, null);
+    const nodesToRemove = [];
+
+    while (walker.nextNode()) {
+        const node = walker.currentNode;
+        const tagName = node.tagName;
+        if (!allowedTags.has(tagName)) {
+            nodesToRemove.push(node);
+            continue;
+        }
+
+        [...node.attributes].forEach(attr => {
+            const name = attr.name.toLowerCase();
+            const allowedForTag = allowedAttributes[tagName] || [];
+            const allowedGlobal = allowedAttributes['*'] || [];
+            const isAllowed = allowedForTag.includes(name) || allowedGlobal.includes(name);
+
+            if (name.startsWith('on') || !isAllowed) {
+                node.removeAttribute(attr.name);
+                return;
+            }
+
+            if ((name === 'href' || name === 'src') && !isSafeUrl(attr.value)) {
+                node.removeAttribute(attr.name);
+            }
+        });
+    }
+
+    nodesToRemove.forEach(node => {
+        const textNode = document.createTextNode(node.textContent || '');
+        node.replaceWith(textNode);
+    });
+
+    return template.innerHTML;
+}
 
 function initExam() {
     console.log("Exam Initializing v4.3 (Mouse Pos)...");
@@ -35,6 +96,8 @@ function initExam() {
         dom.finishBtn.addEventListener('click', () => submitExam(false));
     }
 
+    attachNavigationShortcuts();
+
     // Pause System
     const pauseBtn = document.getElementById('pause-btn');
     const resumeBtn = document.getElementById('resume-btn');
@@ -47,12 +110,14 @@ let isPaused = false;
 function pauseExam() {
     isPaused = true;
     clearInterval(timerInterval);
-    document.getElementById('pause-overlay').style.display = 'flex';
+    const overlay = document.getElementById('pause-overlay');
+    if (overlay) overlay.style.display = 'flex';
 }
 
 function resumeExam() {
     isPaused = false;
-    document.getElementById('pause-overlay').style.display = 'none';
+    const overlay = document.getElementById('pause-overlay');
+    if (overlay) overlay.style.display = 'none';
     startTimer();
 }
 
@@ -220,14 +285,16 @@ async function loadQuestions() {
 
         const res = await fetch(`api/get_questions.php?mode=${mode}&t=` + Date.now());
         // Clear "Loading..." immediately
-        dom.listContainer.innerHTML = '';
+        if (dom.listContainer) dom.listContainer.innerHTML = '';
 
         const text = await res.text();
         let json;
         try {
             json = JSON.parse(text);
         } catch (e) {
-            dom.listContainer.innerHTML = `<div style="text-align:center; padding:20px; color:var(--danger-color);">Erro fatal: Resposta inválida do servidor.<br><pre>${text.substring(0, 200)}</pre></div>`;
+            if (dom.listContainer) {
+                dom.listContainer.innerHTML = `<div style="text-align:center; padding:20px; color:var(--danger-color);">Erro fatal: Resposta inválida do servidor.<br><pre>${text.substring(0, 200)}</pre></div>`;
+            }
             return;
         }
         if (json.success) {
@@ -236,26 +303,33 @@ async function loadQuestions() {
                 renderQuestionList();
                 updateProgress();
             } else {
-                dom.listContainer.innerHTML = `
+                if (dom.listContainer) {
+                    dom.listContainer.innerHTML = `
                     <div style="text-align:center; padding:40px; color:#64748b;">
                         <h3>Nenhuma questão encontrada.</h3>
                         <p>Modo: <strong>${json.debug?.mode}</strong> | UserID: <strong>${json.debug?.user_id}</strong></p>
                         <p>Tente importar um PDF novamente.</p>
                     </div>
                 `;
+                }
                 Toast.warning(`Nenhuma questão encontrada (ID: ${json.debug?.user_id})`);
             }
         } else {
-            dom.listContainer.innerHTML = `<div style="text-align:center; padding:20px; color:var(--danger-color);">Erro ao carregar: ${json.message}</div>`;
+            if (dom.listContainer) {
+                dom.listContainer.innerHTML = `<div style="text-align:center; padding:20px; color:var(--danger-color);">Erro ao carregar: ${json.message}</div>`;
+            }
             Toast.error(json.message || "Erro desconhecido");
         }
     } catch (e) {
         console.error(e);
-        dom.listContainer.innerHTML = `<div style="text-align:center; padding:20px; color:var(--danger-color);">Erro de Conexão: ${e.message}</div>`;
+        if (dom.listContainer) {
+            dom.listContainer.innerHTML = `<div style="text-align:center; padding:20px; color:var(--danger-color);">Erro de Conexão: ${e.message}</div>`;
+        }
     }
 }
 
 function renderQuestionList() {
+    if (!dom.listContainer) return;
     dom.listContainer.innerHTML = '';
     questionsData.forEach((q, i) => {
         const isLocked = (q.is_locked == 1);
@@ -269,14 +343,20 @@ function renderQuestionList() {
         }
 
         const badge = isLocked ? ((q.locked_is_correct == 1) ? '✅' : '❌') : '';
+        const safePageRef = Number.isFinite(Number(q.pdf_page_ref)) ? Number(q.pdf_page_ref) : 1;
         item.innerHTML = `
             <div class="q-item-header">
                 <span>Questão ${i + 1} ${badge}</span>
-                <span class="pdf-link" onclick="syncPdf(${q.pdf_page_ref})">Ver Pág ${q.pdf_page_ref} ↗</span>
+                <span class="pdf-link" onclick="syncPdf(${safePageRef})">Ver Pág ${safePageRef} ↗</span>
             </div>
-            <div class="q-statement">${(q.statement || "").replace(/\n/g, '<br>')}</div>
             <div class="q-options-row"></div>
         `;
+
+        const statement = document.createElement('div');
+        statement.className = 'q-statement';
+        statement.innerHTML = sanitizeQuestionHtml(q.statement || "");
+        statement.style.whiteSpace = 'pre-line';
+        item.insertBefore(statement, item.querySelector('.q-options-row'));
 
         const optsDiv = item.querySelector('.q-options-row');
         ['A', 'B', 'C', 'D', 'E'].forEach(l => {
@@ -322,17 +402,6 @@ function renderQuestionList() {
 
     // Initialize Navigator
     renderNavigator();
-
-    // Keyboard Shortcuts
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-            e.preventDefault();
-            navigateToNext();
-        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-            e.preventDefault();
-            navigateToPrev();
-        }
-    });
 }
 
 let currentFocusIndex = -1;
@@ -359,8 +428,19 @@ function scrollToQuestionIndex(i) {
     }
 }
 
-// Initialize Navigator
-renderNavigator();
+function attachNavigationShortcuts() {
+    if (navigationListenerAttached) return;
+    navigationListenerAttached = true;
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+            e.preventDefault();
+            navigateToNext();
+        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            navigateToPrev();
+        }
+    });
+}
 
 
 function renderNavigator() {
@@ -439,6 +519,7 @@ async function submitExam(f = false) {
     if (dat.success) renderResultPanel(dat);
 }
 function renderResultPanel(d) {
+    if (!dom.listContainer) return;
     // 0. Force Re-render to ensure elements exist (fixes blank screen issue)
     renderQuestionList();
 
