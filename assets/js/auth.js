@@ -45,6 +45,7 @@ authForm.addEventListener('submit', async (e) => {
         const response = await fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
             body: JSON.stringify({ username, password })
         });
 

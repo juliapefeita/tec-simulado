@@ -156,6 +156,7 @@
                 try {
                     const response = await fetch('api/upload_pdf.php', {
                         method: 'POST',
+                        credentials: 'same-origin',
                         body: formData
                     });
 
@@ -188,7 +189,9 @@
             if (!confirm('Você realmente deseja limpar este simulado?')) return;
 
             try {
-                const response = await fetch('api/reset_db.php?mode=' + mode);
+                const response = await fetch('api/reset_db.php?mode=' + mode, {
+                    credentials: 'same-origin'
+                });
                 const text = await response.text();
                 try {
                     const result = JSON.parse(text);
