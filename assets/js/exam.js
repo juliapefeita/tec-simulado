@@ -21,6 +21,66 @@ const dom = {
 let currentRange = null;
 let highlightMenu = null;
 
+function sanitizeQuestionHtml(rawHtml) {
+    if (!rawHtml) return '';
+    const template = document.createElement('template');
+    template.innerHTML = rawHtml;
+
+    const allowedTags = new Set([
+        'A', 'B', 'BR', 'DIV', 'EM', 'I', 'IMG', 'LI', 'MARK', 'OL', 'P', 'SPAN', 'STRONG', 'U', 'UL'
+    ]);
+    const allowedAttributes = {
+        A: ['href', 'target', 'rel', 'class', 'style'],
+        IMG: ['src', 'alt', 'title', 'class', 'style'],
+        '*': ['class', 'style']
+    };
+
+    const isSafeUrl = (value) => {
+        if (!value) return false;
+        return value.startsWith('http://')
+            || value.startsWith('https://')
+            || value.startsWith('/')
+            || value.startsWith('./')
+            || value.startsWith('../')
+            || value.startsWith('assets/');
+    };
+
+    const walker = document.createTreeWalker(template.content, NodeFilter.SHOW_ELEMENT, null);
+    const nodesToRemove = [];
+
+    while (walker.nextNode()) {
+        const node = walker.currentNode;
+        const tagName = node.tagName;
+        if (!allowedTags.has(tagName)) {
+            nodesToRemove.push(node);
+            continue;
+        }
+
+        [...node.attributes].forEach(attr => {
+            const name = attr.name.toLowerCase();
+            const allowedForTag = allowedAttributes[tagName] || [];
+            const allowedGlobal = allowedAttributes['*'] || [];
+            const isAllowed = allowedForTag.includes(name) || allowedGlobal.includes(name);
+
+            if (name.startsWith('on') || !isAllowed) {
+                node.removeAttribute(attr.name);
+                return;
+            }
+
+            if ((name === 'href' || name === 'src') && !isSafeUrl(attr.value)) {
+                node.removeAttribute(attr.name);
+            }
+        });
+    }
+
+    nodesToRemove.forEach(node => {
+        const textNode = document.createTextNode(node.textContent || '');
+        node.replaceWith(textNode);
+    });
+
+    return template.innerHTML;
+}
+
 function initExam() {
     console.log("Exam Initializing v4.3 (Mouse Pos)...");
 
@@ -294,7 +354,7 @@ function renderQuestionList() {
 
         const statement = document.createElement('div');
         statement.className = 'q-statement';
-        statement.textContent = q.statement || "";
+        statement.innerHTML = sanitizeQuestionHtml(q.statement || "");
         statement.style.whiteSpace = 'pre-line';
         item.insertBefore(statement, item.querySelector('.q-options-row'));
 
